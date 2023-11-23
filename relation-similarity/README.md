@@ -5,6 +5,19 @@ Using fact distribution to quantify the similarity between relations in knowledg
 If you use the code, pleace cite the following [paper](https://www.aclweb.org/anthology/P19-1278):
 
 ```
+@inproceedings{inproceedings,
+author = {Kalinowski, Alexander and An, Yuan},
+year = {2022},
+month = {12},
+pages = {349-355},
+title = {Is There a Limit to the Utility of Analogy? A Case Study in Knowledge Graph Triple Representation},
+doi = {10.1109/CSCI58124.2022.00069}
+}
+```
+
+and
+
+```
 @inproceedings{chen2019quantifying,
   title={Quantifying Similarity between Relations with Fact Distribution},
   author={Chen, Weize and Zhu, Hao and Han, Xu and Liu, Zhiyuan and Sun, Maosong},
