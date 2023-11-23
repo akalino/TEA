@@ -1,6 +1,29 @@
 # PTSS
 This repository contains the data and code to support the experiments found in "Repurposing Knowledge Graph Embeddings for Triple Representation via Weak Supervision".
 
+If you use this code, please cite the following:
+
+```
+@INPROCEEDINGS{9923036,
+  author={Kalinowski, Alexander and An, Yuan},
+  booktitle={2022 International Conference on Intelligent Data Science Technologies and Applications (IDSTA)}, 
+  title={Repurposing Knowledge Graph Embeddings for Triple Representation via Weak Supervision}, 
+  year={2022},
+  volume={},
+  number={},
+  pages={129-137},
+  doi={10.1109/IDSTA55301.2022.9923036}}
+```
+and
+
+```
+@misc{kalinowski_aic,
+title={Quantifying the Impact of Predicate Similarities on
+Knowledge Graph Triple Embeddings}, 
+author={Kalinowski, Alexander and An, Yuan},
+year={2022},
+publisher={AIC 2022, 8th International Workshop on Artificial Intelligence and Cognition}}
+```
 
 ## Getting Started
 To begin, clone and enter this repository, then clone and install LibKGE as detailed here (https://github.com/uma-pi1/kge).
