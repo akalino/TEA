@@ -1,0 +1,69 @@
+dataset:
+  name: wikidata
+entity_ranking:
+  chunk_size: 5000
+  metrics_per:
+    relation_type: true
+eval:
+  batch_size: 256
+import:
+- reciprocal_relations_model
+- rotate
+job:
+  device: cuda:0
+lookup_embedder:
+  dim: 256
+  initialize_args:
+    normal_:
+      mean: 0.0
+      std: 0.0495149496143047
+    uniform_:
+      a: -0.8978815014779652
+    xavier_normal_:
+      gain: 1.0
+    xavier_uniform_:
+      gain: 1.0
+  regularize_args:
+    p: 3
+model: reciprocal_relations_model
+negative_sampling:
+  implementation: triple
+  num_samples:
+    o: 349
+    s: 46
+reciprocal_relations_model:
+  base_model:
+    relation_embedder:
+      dim: 128
+    type: rotate
+rotate:
+  entity_embedder:
+    dropout: -0.21862865970440937
+    regularize_weight: 4.56985776657145e-09
+  l_norm: 2.0
+  relation_embedder:
+    dropout: -0.3645267730568348
+    regularize_weight: 1.526902234139287e-15
+train:
+  auto_correct: true
+  batch_size: 512
+  loss_arg: .nan
+  lr_scheduler: ReduceLROnPlateau
+  lr_scheduler_args:
+    factor: 0.95
+    mode: max
+    patience: 4
+    threshold: 0.0001
+  max_epochs: 400
+  optimizer:
+    default:
+      args:
+        lr: 0.38030867647803834
+  subbatch_auto_tune: true
+  type: negative_sampling
+valid:
+  early_stopping:
+    patience: 10
+    threshold:
+      epochs: 50
+      metric_value: 0.05

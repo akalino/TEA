@@ -1,0 +1,15 @@
+{
+  "language_model": "gem",
+  "kg_embedding": "ptss",
+  "model_type": "transe",
+  "kg_dimension": 300,
+  "data_source": "nytfb",
+  "batch_size": 2048,
+  "kg_combination": "concat",
+  "normalization": "none",
+  "learning_rate": 0.01,
+  "epochs": 1,
+  "patience": 2,
+  "compute_shape": "False",
+  "beta": 0.0
+}
