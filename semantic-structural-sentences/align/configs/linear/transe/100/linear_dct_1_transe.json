@@ -1,0 +1,15 @@
+{
+  "language_model": "dct",
+  "komp": 1,
+  "kg_embedding": "transe",
+  "kg_dimension": 100,
+  "data_source": "riedel",
+  "batch_size": 512,
+  "kg_combination": "concat",
+  "normalization": "both",
+  "learning_rate": 0.001,
+  "epochs": 100,
+  "patience": 10,
+  "compute_shape": "False",
+  "beta": 0.01
+}

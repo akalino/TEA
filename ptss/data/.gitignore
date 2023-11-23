@@ -1,0 +1,9 @@
+*.gz
+*.csv
+codex/
+data/
+enwiki-20160501/
+fb15k-237/
+nytfb/
+wikidata/
+wnrr/
