@@ -1,2 +1,2 @@
 # TEA
-Triple embedding alignment via batched information guided optimal transport
+Triple Embedding Alignment (TEA) via Batched Information Guided Optimal Transport (BIG-OT)
