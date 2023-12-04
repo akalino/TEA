@@ -75,9 +75,10 @@ def plot_kl(_set, _sh):
     _m = np.loadtxt('result/kl_prob_{}.txt'.format(_set))
     _b = normalize(_m)
     _c = make_diagonal(_b, 1.0)
+    np.save('matrices/{}-{}.npy'.format(_set, 'kl'), _c)
     s_ent = von_neumann_entropy(_c)
     s_eig = von_neumann_eigen(_c)
-    hm = plot_heat(_c, _sh)
+    hm = plot_heat(_c, _sh, _set + '_kl')
     rp = top_five_candidates(_c, _set)
     return s_ent, s_eig, hm, rp
 
@@ -85,9 +86,10 @@ def plot_kl(_set, _sh):
 def plot_freq(_set, _sh):
     _c = np.genfromtxt('result/rel_matrix_{}.csv'.format(_set),
                        delimiter=',')
+    np.save('matrices/{}-{}.npy'.format(_set, 'freq'), _c)
     s_ent = von_neumann_entropy(_c)
     s_eig = von_neumann_eigen(_c)
-    hm = plot_heat(_c, _sh)
+    hm = plot_heat(_c, _sh, _set + '_freq')
     rp = top_five_candidates(_c, _set)
     return s_ent, s_eig, hm, rp
 
@@ -100,9 +102,10 @@ def plot_vecs(_set, _mn, _sh):
     _rels = relation_pretrain[0:num_rel, :]
     _c = sim_matrix(_rels,
                     _rels)
+    np.save('matrices/{}_{}.npy'.format(_set, _mn), _c)
     s_ent = von_neumann_entropy(_c)
     s_eig = von_neumann_eigen(_c)
-    hm = plot_heat(_c, _sh)
+    hm = plot_heat(_c, _sh, _set + '_{}_vecs'.format(_mn))
     rp = top_five_candidates(_c, _set)
     return s_ent, s_eig, hm, rp
 
@@ -114,7 +117,7 @@ def compute_overlaps(_rdict):
     :param _rdict: Dictionary of all top 5 candidate predicates.
     :return:
     """
-    for _ds in ['fb15k-237', 'wnrr']:
+    for _ds in ['fb15k-237', 'wnrr', 'wikidata']:
         mod_res = []
         results = _rdict[_ds]
         models = list(results.keys())
@@ -137,7 +140,7 @@ def compute_overlaps(_rdict):
 
 
 if __name__ == "__main__":
-    show = False
+    show = True
     out = []
     all_ranks = {'fb15k-237': {}, 'wnrr': {}}
     s1, s2, hm1, rp1 = plot_kl('fb15k-237', show)
