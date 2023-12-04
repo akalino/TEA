@@ -20,10 +20,11 @@ def normalize(_m):
     return _new_m
 
 
-def plot_heat(_m, _sh):
+def plot_heat(_m, _sh, _mn):
     _gr = sns.heatmap(_m)
     if _sh:
-        plt.savefig()
+        plt.savefig('heatmaps/{}.png'.format(_mn))
+        plt.close()
     return _gr
 
 

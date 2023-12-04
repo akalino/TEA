@@ -16,14 +16,17 @@ from sentence_transformers.evaluation import EmbeddingSimilarityEvaluator
 from sentence_transformers import losses
 from sentence_transformers.util import fullname
 
-from modules.TripleEmbedder import TripleEmbedder
+from modules.TripleEmbedderOrig import TripleEmbedder
 from modules.CustomCosineLoss import CustomCosineSimilarityLoss
 
 
 BATCH_SIZE = 128
-EPOCHS = 20
+# Batch size for WN18RR 128
+EPOCHS = 50
 LR = 2e-3
+# LR for WN18RR 2e-2
 SENT_DIM = 300
+PATIENCE = 1
 
 
 def create_emb_layer(weights_matrix):
@@ -59,6 +62,10 @@ class DenseEncoder(nn.Module):
         _mapped1 = self.activation(self.linear(a))
         _mapped2 = self.activation(self.linear(b))
         return _mapped1, _mapped2
+
+    def eval_forward(self, trip1):
+        a = self.triple_embeddings(trip1)
+        return a
 
     def tokenize(self, _repr):
         return _repr
@@ -153,14 +160,14 @@ def represent_triples(_h, _t, _rel, _ent_embs, _rel_embs, _concat_method, _norm)
             _ent_embs[_h] - _ent_embs[_t])**2
     if _norm:
         _triple = nn.functional.normalize(_triple, p=2, dim=0)
-    return torch.tensor(_triple, requires_grad=True)
+    return _triple.clone().detach().requires_grad_(True)
 
 
-def data_loader(_d, _mn, _ns, _concat_method, _norm, _induct):
+def data_loader(_d, _mn, _ns, _concat_method, _pt, _norm, _induct):
     train_samples = []
     dev_samples = []
     test_samples = []
-    df = pd.read_csv('ptss-benchmarks/triple_scores_{}_{}_{}.csv'.format(_d, _mn, _ns))
+    df = pd.read_csv('ptss-benchmarks/{}/triple_scores_{}_{}_{}_{}.csv'.format(_d, _d, _mn, _pt, _ns))
     ent_embs, rel_embs = fetch_embeddings('pytorch-models/{}-{}.pt'.format(_d, _mn))
     emb_dim = ent_embs.shape[1]
     if _concat_method == 'ht':
@@ -196,12 +203,28 @@ def data_loader(_d, _mn, _ns, _concat_method, _norm, _induct):
         inp_example = InputExample(texts=[torch.tensor(row['triple_index_1']), torch.tensor(row['index'])], label=score)
         if _induct:
             train_samples.append(inp_example)
+            # print('Train')
+            # print('Example A: {}'.format(torch.tensor(row['triple_index_1'])))
+            # print('Example B: {}'.format(torch.tensor(row['index'])))
+            # print('Score: {}'.format(score))
         else:
             if j < train_size:
+                # print('Train')
+                # print('Example A: {}'.format(torch.tensor(row['triple_index_1'])))
+                # print('Example B: {}'.format(torch.tensor(row['index'])))
+                # print('Score: {}'.format(score))
                 train_samples.append(inp_example)
             elif (j > train_size) and (j < dev_size):
+                # print('Dev')
+                # print('Example A: {}'.format(torch.tensor(row['triple_index_1'])))
+                # print('Example B: {}'.format(torch.tensor(row['index'])))
+                # print('Score: {}'.format(score))
                 dev_samples.append(inp_example)
             else:
+                # print('Test')
+                # print('Example A: {}'.format(torch.tensor(row['triple_index_1'])))
+                # print('Example B: {}'.format(torch.tensor(row['index'])))
+                # print('Score: {}'.format(score))
                 test_samples.append(inp_example)
     print('Added {} training, {} dev and {} test'.format(len(train_samples), len(dev_samples), len(test_samples)))
     print('Indexed {} triples'.format(len(list(triple_dict.keys()))))
@@ -211,20 +234,21 @@ def data_loader(_d, _mn, _ns, _concat_method, _norm, _induct):
     weights_out = np.zeros((len(weight_est), vec_dim))
     for j in range(len(weight_est)):
         weights_out[j, :] = weight_est[j].cpu().detach().numpy()
-    print(weights_out.shape)
-    return train_samples, dev_samples, test_samples, feat_dim, weights_out
+    print('Weights shape: {}'.format(weights_out.shape))
+    return train_samples, dev_samples, test_samples, feat_dim, weights_out, triple_dict
 
 
-def training(_train, _dev, _test, _feat_dim, _init_w, _num_epochs, _full_name, _mt, _sd, _ns):
-    #run_tracker = wandb.init()
+def training(_train, _dev, _test, _feat_dim, _init_w, _num_epochs, _full_name, _mt, _sd, _ns, _pt):
+    # run_tracker = wandb.init()
     train_batch_size = BATCH_SIZE
     sentence_dimension = _sd
-    print('Training model type {}-{}--{}'.format(_mt, _sd, _ns))
+    print('Training model type {}-{}-{}-{}'.format(_mt, _sd, _ns, _pt))
     model_save_path = 'train_stats'
     try:
         wd = os.path.normpath(os.getcwd())
-        model_out_path = os.path.join(wd, 'triple_vectors',
-                                      'triples_{f}_{d}_{n}.pt'.format(f=_full_name, d=sentence_dimension, n=_ns))
+        model_out_path = os.path.join(wd, 'triple_vectors_new',
+                                      'triples_{f}_{d}_{n}_{p}.pt'.format(f=_full_name, d=sentence_dimension, n=_ns, p=_pt))
+        print(model_out_path)
         vecs = torch.load(model_out_path)
         print('Already trained this model, loaded vectors with shape {}'.format(vecs.shape))
     except FileNotFoundError:
@@ -233,47 +257,49 @@ def training(_train, _dev, _test, _feat_dim, _init_w, _num_epochs, _full_name, _
         elif _mt == 'match_sent':
             w = torch.empty(_init_w.shape[0], sentence_dimension)
             _init_w = torch.nn.init.xavier_normal_(w)
-            mod = DenseExpander(_init_w, sentence_dimension, _feat_dim*2, True, model_save_path, _full_name)
-        model = TripleEmbedder(modules=[mod])
-        #run_tracker.watch(model)
+            mod = DenseEncoder(_init_w, sentence_dimension, _feat_dim*2, True, model_save_path, _full_name)
+        model = TripleEmbedder(modules=[mod], patience=PATIENCE)
+        # run_tracker.watch(model)
         train_dataloader = DataLoader(_train, shuffle=True, batch_size=train_batch_size)
         train_loss = CustomCosineSimilarityLoss(model=model)
-        #evaluator = EmbeddingSimilarityEvaluator.from_input_examples(_dev, name=_full_name)
+        evaluator = EmbeddingSimilarityEvaluator.from_input_examples(_dev, name=_full_name)
+        print('Testing after {} iterations'.format(int(len(_dev)) / 2))
         warmup_steps = math.ceil(len(train_dataloader) * _num_epochs * 0.1)  # 10% of train data for warm-up
         # Train the model
         model.fit(train_objectives=[(train_dataloader, train_loss)],
-                  #evaluator=evaluator,
+                  evaluator=evaluator,
                   epochs=_num_epochs,
                   optimizer_params={'lr': LR},
-                  evaluation_steps=1000,
+                  evaluation_steps=int(len(_dev) / 2),
                   warmup_steps=warmup_steps,
                   output_path=model_save_path)
-                  #experiment_tracker=run_tracker)
+                  # experiment_tracker=run_tracker)
         if _mt == 'standard':
             triple_embs = mod.triple_embeddings.weight
             print(triple_embs.shape)
             wd = os.path.normpath(os.getcwd())
-            model_out_path = os.path.join(wd, 'triple_vectors',
-                                          'triples_{f}_{n}.pt'.format(f=_full_name, n=_ns))
+            model_out_path = os.path.join(wd, 'triple_vectors_new',
+                                          'triples_{f}_{n}_{p}.pt'.format(f=_full_name, n=_ns, p=_pt))
             torch.save(triple_embs, model_out_path)
         elif _mt == 'match_sent':
             triple_embs = mod.triple_embeddings.weight
             print(triple_embs.shape)
             wd = os.path.normpath(os.getcwd())
-            model_out_path = os.path.join(wd, 'triple_vectors',
-                                          'triples_{f}_{d}_{n}.pt'.format(f=_full_name, d=sentence_dimension, n=_ns))
+            model_out_path = os.path.join(wd, 'triple_vectors_new',
+                                          'triples_{f}_{d}_{n}_{p}.pt'.format(f=_full_name, d=sentence_dimension,
+                                                                              n=_ns, p=_pt))
             torch.save(triple_embs, model_out_path)
-        #run_tracker.finish(quiet=True)
+        # run_tracker.finish(quiet=True)
     return model_out_path
 
 
-def run_triple_fitting(_mod_name, _feature_name, _ds_name, _mt, _sd, _ns):
+def run_triple_fitting(_mod_name, _feature_name, _ds_name, _mt, _sd, _ns, _pt):
     print('Working with {} data'.format(_ds_name))
-    full_name = '{}-{}-{}-{}'.format(_ds_name, _mod_name, _feature_name, _ns)
+    full_name = '{}-{}-{}-{}-{}'.format(_ds_name, _mod_name, _feature_name, _ns, _pt)
     try:
         wd = os.path.normpath(os.getcwd())
-        model_out_path = os.path.join(wd, 'triple_vectors',
-                                      'triples_{f}_{d}_{n}.pt'.format(f=full_name, d=_sd, n=_ns))
+        model_out_path = os.path.join(wd, 'triple_vectors_new',
+                                      'triples_{f}_{n}_{p}.pt'.format(f=full_name, n=_ns, p=_pt))
         vecs = torch.load(model_out_path)
         print('Already trained this model, loaded vectors with shape {}'.format(vecs.shape))
 
@@ -290,7 +316,8 @@ def run_triple_fitting(_mod_name, _feature_name, _ds_name, _mt, _sd, _ns):
             feature_dim = weights.shape[1]
             print('Training on {} features'.format(feature_dim))
         except FileNotFoundError:
-            train, dev, test, feature_dim, weights = data_loader(_ds_name, _mod_name, _ns, _feature_name, False, False)
+            train, dev, test, feature_dim, weights, trip_dict = data_loader(_ds_name, _mod_name, _ns,
+                                                                            _feature_name, _pt, False, False)
             np.save('intermediate/{}-training.npy'.format(full_name), train)
             print('wrote train')
             np.save('intermediate/{}-dev.npy'.format(full_name), dev)
@@ -300,7 +327,8 @@ def run_triple_fitting(_mod_name, _feature_name, _ds_name, _mt, _sd, _ns):
             np.save('intermediate/{}-weights.npy'.format(full_name), weights)
             print('wrote weights')
         weights = torch.tensor(weights)
-        model_out_path = training(train, dev, test, feature_dim, weights, EPOCHS, full_name, _mt, _sd, _ns)
+        print(weights.shape)
+        model_out_path = training(train, dev, test, feature_dim, weights, EPOCHS, full_name, _mt, _sd, _ns, _pt)
     return model_out_path
 
 
