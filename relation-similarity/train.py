@@ -10,7 +10,9 @@ import torch.nn as nn
 from tensorboardX import SummaryWriter
 from torch.utils.data import DataLoader
 
-from models.baseModel import baseModel
+from tqdm import tqdm
+
+from models.baseModelOrig import baseModel
 from util.dataloader import relationDataset
 
 args = argparse.ArgumentParser()
@@ -19,8 +21,8 @@ args.add_argument('--output', required=True, help='path to directory that output
 args.add_argument('--hidden1', default=1024, type=int, help='the dimension of first hidden layer of MLP')
 args.add_argument('--hidden2', default=1024, type=int, help='the dimension of first hidden layer of MLP')
 args.add_argument('--batch_size', default=256, type=int, help='batch size')
-args.add_argument('--ent_emb_size', default=100, type=int, help='the dimension of entity vectors')
-args.add_argument('--rel_emb_size', default=100, type=int, help='the dimension of relation vectors')
+args.add_argument('--emb_size', default=100, type=int, help='the dimension of entity vectors')
+# args.add_argument('--rel_emb_size', default=100, type=int, help='the dimension of relation vectors')
 args.add_argument('--lr', default=5e-3, type=float, help='learning rate')
 args.add_argument('--weight_decay', default=5e-4, type=float, help='weight decay')
 args.add_argument('--val_step', type=int, default=1, help='the model will run on validation set every val_stop epoches')
@@ -35,6 +37,9 @@ args.add_argument('-load', action='store_true', help='if you add this option, \
                     it will automatically load the stored model and resume training')
 args.add_argument('-class', type=str, default='transe', help='Choose which pretrained model class to use')
 args = vars(args.parse_args())
+args['ent_emb_size'] = args['emb_size']
+args['rel_emb_size'] = args['emb_size']
+
 
 os.environ['CUDA_VISIBLE_DEVICES'] = args['gpu']
 
@@ -47,22 +52,22 @@ writer = SummaryWriter(args['output'])
 writer.add_text('learning rate', str(args['lr']))
 writer.add_text('batch_size', str(args['batch_size']))
 copyfile('./train.py', os.path.join(args['output'], 'train.py'))
-copyfile('models/baseModel.py', os.path.join(args['output'], 'baseModel.py'))
+copyfile('models/baseModelOrig.py', os.path.join(args['output'], 'baseModelOrig.py'))
 
 logging.info("Train dataset:")
 ds_name = args['input'].split('/')[2]
 print('Training on the {} dataset'.format(ds_name))
-train_dataset = relationDataset(os.path.join(args['input'], 'train2id.txt'),\
+train_dataset = relationDataset(os.path.join(args['input'], 'train.txt'),\
      os.path.join(args['input'], 'entity2id.txt'), os.path.join(args['input'], 'relation2id.txt'))
 logging.info("Validation datset:")
-val_dataset = relationDataset(os.path.join(args['input'], 'valid2id.txt'),\
+val_dataset = relationDataset(os.path.join(args['input'], 'valid.txt'),\
      os.path.join(args['input'], 'entity2id.txt'), os.path.join(args['input'], 'relation2id.txt'))
 train_loader = DataLoader(train_dataset, batch_size=args['batch_size'], shuffle=True)
 val_loader = DataLoader(val_dataset, batch_size=1024, shuffle=False)
 
 info = args
-info['ent_emb_size'] = args['ent_emb_size']
-info['rel_emb_size'] = args['rel_emb_size']
+#info['ent_emb_size'] = args['ent_emb_size']
+info['emb_size'] = args['emb_size']
 info['tot_rel'] = train_dataset.relation_num
 info['tot_ent'] = train_dataset.entity_num
 info['weight_decay'] = args['weight_decay']
@@ -92,7 +97,7 @@ min_val_loss = 1e30
 bad_cnt = 0
 while epoch < 500:
     loss = 0
-    for heads, rels, tails, _ in train_loader:
+    for heads, rels, tails, _ in tqdm(train_loader):
         loss += model.train_step(heads.cuda(), rels.cuda(), tails.cuda())
     info['epoch'] = epoch + 1
     writer.add_scalar('loss', loss / len(train_dataset), epoch+1)
