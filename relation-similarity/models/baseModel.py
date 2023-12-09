@@ -101,15 +101,27 @@ class baseModel(nn.Module):
         return torch.matmul(x, self.eemb.weight.transpose(1, 0))
 
     def train_step(self, heads, rels, tails, train=True):
+        print(heads.shape, rels.shape, tails.shape)
         if train:
+            print(len(heads))
             tmp1 = self.forward(self.remb(rels), self.layers1)
-            ph = self.log_softmax(tmp1)[[i for i in range(len(heads))], heads].cuda()
+            print(tmp1.shape)
+            print(heads)
+            ph = self.log_softmax(tmp1)[[i for i in range(len(heads))], heads]
             if self.ent_emb_size == self.rel_emb_size:
+                print('sizes matches')
                 tmp2 = self.forward(self.remb(rels) + self.eemb(heads), self.layers2)
+                print(tmp2)
             else:
+                print('why size mismatch')
                 ents_mapped = self.map_layer(self.eemb(heads))
                 tmp2 = self.forward(self.remb(rels) + ents_mapped, self.layers2)
-            pt = self.log_softmax(tmp2)[[i for i in range(len(heads))], tails].cuda()
+                print(tmp2)
+            print('did it once')
+            print(len(heads))
+            print(len(tails))
+            print(tmp.shape)
+            pt = self.log_softmax(tmp2)[[i for i in range(len(heads))], tails]
             loss = -(torch.sum(ph + pt))
             self.opt.zero_grad()
             loss.backward()

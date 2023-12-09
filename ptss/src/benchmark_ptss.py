@@ -21,7 +21,7 @@ def fetch_embeddings(_path):
 
 
 def get_triples(_ds, _n):
-    _df = pd.read_csv('ptss-benchmarks/{}/triple_benchmarks_{}_{}.csv'.format(_ds, _ds, _n))
+    _df = pd.read_csv('ptss-benchmarks/{}/triple_benchmarks_{}.csv'.format(_ds, _ds))
     print('Found {} benchmark triples for {} -- {} samples'.format(len(_df), _ds, _n))
     return _df
 
@@ -106,7 +106,7 @@ def parallel_score_numpy(_triple_df, _ent_embs, _rel_sims):
 
 
 if __name__ == "__main__":
-    ds = ['fb15k-237']
+    ds = ['wnrr']
     model_paths = ['pytorch-models/{}-complex.pt',
                    'pytorch-models/{}-conve.pt',
                    'pytorch-models/{}-distmult.pt',
@@ -114,8 +114,8 @@ if __name__ == "__main__":
                    'pytorch-models/{}-rotate.pt',
                    'pytorch-models/{}-transe.pt'
                    ]
-    samples = [5, 10, 20, 30]
-    pred_type = ['emb', 'freq', 'kl']
+    samples = [5]
+    pred_type = ['freq'] #, 'freq', 'kl']
     for d in ds:
         for ns in samples:
             trip_df = get_triples(d, ns)

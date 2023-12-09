@@ -11,7 +11,7 @@ import torch.nn as nn
 from tqdm import tqdm
 
 from comparison_utils import make_diagonal, normalize, von_neumann_entropy
-from models.baseModel import baseModel
+from models.baseModelOrig import baseModel
 from util.dataloader import relationDataset
 
 args = argparse.ArgumentParser()
@@ -35,7 +35,7 @@ if not os.path.exists(args['output']):
 with open(os.path.join(args['model_path'], '{}-{}-info.json'.format(args['dataset'], args['class'])), 'r') as f:
     info = json.load(f)
 logging.info("Loading model")
-model = baseModel(info, info['tot_rel'], info['tot_ent'])
+model = baseModel(info, info['tot_ent'], info['tot_rel'])
 flag = False
 model.load_state_dict(torch.load(os.path.join(args['model_path'],
                                               '{}-{}-model.pth'.format(args['dataset'], args['class']))))
@@ -48,7 +48,7 @@ model.cuda()
 ds_name = args['input'].split('/')
 dn = ds_name[-2]
 
-dataset = relationDataset(os.path.join(args['input'], 'train2id.txt'),
+dataset = relationDataset(os.path.join(args['input'], 'train.txt'),
                           os.path.join(args['input'], 'entity2id.txt'),
                           os.path.join(args['input'], 'relation2id.txt'))
 logging.info("Calculating similarity")
@@ -78,7 +78,10 @@ with open(os.path.join(args['output'], 'kl_prob_{}_{}_{}.txt'.format(args['datas
 _m = np.loadtxt(os.path.join(args['output'], 'kl_prob_{}_{}_{}.txt'.format(args['dataset'],
                                                                            args['class'],
                                                                            args['sample_num'])))
+
 _b = normalize(_m)
 _c = make_diagonal(_b, 1.0)
+print(_c.shape)
+np.save('wnrr-kl.npy', _c)
 s_ent = von_neumann_entropy(_c)
 print('Fact distribution von Neumann entropy (trace): {}'.format(s_ent))

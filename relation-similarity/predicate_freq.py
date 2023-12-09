@@ -24,9 +24,10 @@ def read_predicate_map(_path):
 
 
 def read_all_triples(_set):
-    train_path = os.path.join('data', _set, 'train.txt')
-    valid_path = os.path.join('data', _set, 'valid.txt')
-    test_path = os.path.join('data', _set, 'test.txt')
+    wd = os.path.normpath(os.getcwd() + os.sep + os.pardir + os.sep + os.pardir)
+    train_path = os.path.join(wd, 'GRAPHS', _set, 'train.txt')
+    valid_path = os.path.join(wd, 'GRAPHS', _set, 'valid.txt')
+    test_path = os.path.join(wd, 'GRAPHS', _set, 'test.txt')
     train_df = pd.read_csv(train_path, sep="\t")
     train_df.columns = ['head', 'pred', 'tail']
     valid_df = pd.read_csv(valid_path, sep="\t")
@@ -41,8 +42,12 @@ def read_all_triples(_set):
     print(frequency)
     print(dict(frequency))
 
-    mp = os.path.join('data', _set, 'relation2id.txt')
-    map = read_predicate_map(mp)
+    try:
+        mp = os.path.join(wd, 'GRAPHS', _set, 'relation2id.txt')
+        map = read_predicate_map(mp)
+    except FileNotFoundError:
+        mp = os.path.join(wd, 'GRAPHS', _set, 'relation_ids.del')
+        map = read_predicate_map(mp)
 
 
 if __name__ == "__main__":

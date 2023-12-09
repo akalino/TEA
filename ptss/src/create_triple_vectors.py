@@ -15,9 +15,9 @@ def experiments():
     combs = ['ht']
     ds = ['wnrr']
     mt = 'standard'
-    pred_type = ['emb', 'freq', 'kl']
+    pred_type = ['freq'] #, 'freq', 'kl']
     sds = [300]  # [768, 1024, 2048, 4096, 4800]
-    ns = [10, 20, 30]
+    ns = [5]
     for d in ds:
         for m in mods:
             for c in combs:
