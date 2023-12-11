@@ -82,6 +82,6 @@ _m = np.loadtxt(os.path.join(args['output'], 'kl_prob_{}_{}_{}.txt'.format(args[
 _b = normalize(_m)
 _c = make_diagonal(_b, 1.0)
 print(_c.shape)
-np.save('wnrr-kl.npy', _c)
+np.save('fb15k-237-kl.npy', _c)
 s_ent = von_neumann_entropy(_c)
 print('Fact distribution von Neumann entropy (trace): {}'.format(s_ent))

@@ -7,15 +7,15 @@ import numpy as np
 import time
 import torch
 import os
-import cuml
+#import cuml
 
-from cuml.manifold import TSNE, UMAP
+#from cuml.manifold import TSNE, UMAP
 #from gudhi.clustering.tomato import Tomato
 #from gtda.homology import VietorisRipsPersistence
 #from gtda.plotting import plot_diagram
 from sklearn.cluster import KMeans, Birch
 #from cuml import KMeans
-from cuml import PCA
+#from cuml import PCA
 from sklearn.linear_model import LogisticRegression
 from sklearn.metrics import f1_score
 from sklearn.metrics import classification_report
@@ -24,7 +24,7 @@ from sklearn.metrics import silhouette_score
 from sklearn.metrics import calinski_harabasz_score
 from sklearn.utils import shuffle
 from tqdm import tqdm
-from cuml.metrics.cluster.silhouette_score import cython_silhouette_score
+#from cuml.metrics.cluster.silhouette_score import cython_silhouette_score
 
 
 from modules.Classifier import MLP

@@ -13,9 +13,9 @@ def experiments():
             'transe'
             ]
     combs = ['ht']
-    ds = ['wnrr']
+    ds = ['fb15k-237']
     mt = 'standard'
-    pred_type = ['freq'] #, 'freq', 'kl']
+    pred_type = ['emb', 'freq', 'kl']
     sds = [300]  # [768, 1024, 2048, 4096, 4800]
     ns = [5]
     for d in ds:

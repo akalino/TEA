@@ -1,6 +1,6 @@
 import argparse
 import os
-import cudf
+#import cudf
 import pandas as pd
 import numpy as np
 import torch
@@ -48,7 +48,7 @@ def load_space(_ds_name, _dim, _nwalk, _full_name, _type, _dup):
                        allow_pickle=True)
     else:
         print('Loading pairwise edge similarity vectors')
-        pth = os.path.join(wd, 'src', 'triple_vectors', '{}.pt'.format(_full_name))
+        pth = os.path.join(wd, 'src', 'triple_vectors_new', '{}.pt'.format(_full_name))
         #pth = os.path.join(wd, 'src', 'train_stats',
         #                   '{}_model.bin'.format(_full_name))
         mod = torch.load(pth)
@@ -103,3 +103,35 @@ def load_space(_ds_name, _dim, _nwalk, _full_name, _type, _dup):
         plt.title('TSNE for {}'.format(_full_name))
         plt.savefig('tsne_plots/{}.png'.format(_full_name))
 
+
+if __name__ == "__main__":
+    ds = 'wnrr'
+    res = []
+    for mn in ['complex',
+               'conve',
+               'distmult',
+               'rescal',
+               'rotate',
+               'transe']:
+        for pt in ['emb', 'kl', 'freq']:
+            full_name = 'triples_{}-{}-ht-5-{}_5_{}'.format(ds, mn, pt, pt)
+            print('========= Results for {} ========='.format(full_name))
+            cl, cd = load_space(ds, -1, -1, full_name, 'edge', False)
+            res.append([full_name,
+                        cl[0.8]['micro-f1'],
+                        cl[0.8]['macro-f1'],
+                        cl[0.8]['weighted-f1'] ,
+                        cd[0.8]['micro-f1'],
+                        cd[0.8]['macro-f1'],
+                        cd[0.8]['weighted-f1'],
+                        ])
+    df = pd.DataFrame(res)
+    df.columns = ['model',
+                  'cl-mic',
+                  'cl-mac',
+                  'cl-wei',
+                  'cd-mic',
+                  'cd-mac',
+                  'cd-wei'
+                  ]
+    df.to_csv('results/{}_all.csv'.format(ds), index=False)

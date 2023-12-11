@@ -7,28 +7,29 @@ from tqdm import tqdm
 
 
 def load_triple_indices(_ds_name):
-    wd = os.path.normpath(os.getcwd() + os.sep + os.pardir)
-    dp = os.path.join(wd, 'data', _ds_name, 'train.txt')
-    train_triples = pd.read_csv(dp, sep='\t', header=None)
-    train_triples.columns = ['head', 'relation', 'tail']
-    #dp = os.path.join(wd, 'data', _ds_name, 'valid.txt')
-    #valid_triples = pd.read_csv(dp, sep='\t', header=None)
-    #valid_triples.columns = ['head', 'relation', 'tail']
-    #dp = os.path.join(wd, 'data', _ds_name, 'test.txt')
-    #test_triples = pd.read_csv(dp, sep='\t', header=None)
-    #test_triples.columns = ['head', 'relation', 'tail']
-    #all_trip = pd.concat([train_triples, valid_triples, test_triples],
+    wd = os.path.normpath(os.getcwd() + os.sep + os.pardir + os.sep + os.pardir + os.sep + os.pardir)
+    dp = "/kge/data/{}/".format(_ds_name)
+    basepath = wd + dp
+    train = basepath + 'train.txt'
+    valid = basepath + 'valid.txt'
+    test = basepath + 'test.txt'
+    train_triples = pd.read_csv(train, sep='\t', header=None)
+    valid_triples = pd.read_csv(valid, sep='\t', header=None)
+    test_triples = pd.read_csv(test, sep='\t', header=None)
+    # all_trip = pd.concat([train_triples, valid_triples, test_triples],
     #                ignore_index=True)
     all_trip = train_triples
+    all_trip.columns = ['head', 'relation', 'tail']
+    # all_trip = train_triples
     print('{} has {} total triples'.format(_ds_name, len(all_trip)))
     
-    ent_map_path = os.path.join(wd, 'data', _ds_name, 'entity_ids.del')
+    ent_map_path = os.path.join(basepath, 'entity_ids.del')
     ent_map = pd.read_csv(ent_map_path, sep='\t', header=None)
     ent_map.columns = ['index', 'identifier']
     ent_map = ent_map.to_dict()
     ent_map = {v: k for k, v in ent_map['identifier'].items()}
 
-    rel_map_path = os.path.join(wd, 'data', _ds_name, 'relation_ids.del')
+    rel_map_path = os.path.join(basepath, 'relation_ids.del')
     rel_map = pd.read_csv(rel_map_path, sep='\t', header=None)
     rel_map.columns = ['index', 'identifier']
     rel_map = rel_map.to_dict()
@@ -37,7 +38,7 @@ def load_triple_indices(_ds_name):
     all_trip['s'] = all_trip['head'].apply(lambda x: ent_map[x])
     all_trip['o'] = all_trip['tail'].apply(lambda x: ent_map[x])
     all_trip['p'] = all_trip['relation'].apply(lambda x: rel_map[x])
-    all_trip = all_trip[['s', 'o', 'p']]
+    all_trip = all_trip[['s', 'p', 'o']]
     all_trip.to_csv('intermediate/{}_triples.csv'.format(_ds_name), index=False)
     return all_trip
 
@@ -45,7 +46,7 @@ def load_triple_indices(_ds_name):
 def identify_triples(_df, _ds_name):
     total = len(_df)
     _df.reset_index(drop=False, inplace=True)
-    _df.columns = ['triple_idx', 's', 'o', 'p']
+    _df.columns = ['triple_idx', 's', 'p', 'o']
     num_preds = _df.groupby(['s', 'o']).p.agg('count')
     num_preds = num_preds.reset_index(name='count', drop=False)
     dup_edges = num_preds[num_preds['count'] > 1]
@@ -75,8 +76,6 @@ def identify_triples(_df, _ds_name):
 
 if __name__ == "__main__":
     ds = ['wnrr', 'fb15k-237']
-    # ds = ['wikidata']
     for d in ds:
         df = load_triple_indices(d)
         identify_triples(df, d)
-
