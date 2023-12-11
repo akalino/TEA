@@ -12,25 +12,25 @@ def load_triple_indices(_ds_name):
     :return: Dataframe, all triples.
     """
     wd = os.path.normpath(os.getcwd() + os.sep + os.pardir + os.sep + os.pardir + os.sep + os.pardir)
-    dp = os.path.join(wd, 'GRAPHS', _ds_name, 'train.txt')
+    dp = os.path.join(wd, 'kge/data', _ds_name, 'train.txt')
     train_triples = pd.read_csv(dp, sep='\t', header=None)
     train_triples.columns = ['head', 'relation', 'tail']
 
-    dp = os.path.join(wd, 'GRAPHS', _ds_name, 'valid.txt')
+    dp = os.path.join(wd, 'kge/data', _ds_name, 'valid.txt')
     valid_triples = pd.read_csv(dp, sep='\t', header=None)
     valid_triples.columns = ['head', 'relation', 'tail']
 
-    dp = os.path.join(wd, 'GRAPHS', _ds_name, 'test.txt')
+    dp = os.path.join(wd, 'kge/data', _ds_name, 'test.txt')
     test_triples = pd.read_csv(dp, sep='\t', header=None)
     test_triples.columns = ['head', 'relation', 'tail']
 
-    ent_map_path = os.path.join(wd, 'GRAPHS', _ds_name, 'entity_ids.del')
+    ent_map_path = os.path.join(wd, 'kge/data', _ds_name, 'entity_ids.del')
     ent_map = pd.read_csv(ent_map_path, sep='\t', header=None)
     ent_map.columns = ['index', 'identifier']
     ent_map = ent_map.to_dict()
     ent_map = {v: k for k, v in ent_map['identifier'].items()}
 
-    rel_map_path = os.path.join(wd, 'GRAPHS', _ds_name, 'relation_ids.del')
+    rel_map_path = os.path.join(wd, 'kge/data', _ds_name, 'relation_ids.del')
     rel_map = pd.read_csv(rel_map_path, sep='\t', header=None)
     rel_map.columns = ['index', 'identifier']
     rel_map = rel_map.to_dict()
@@ -96,7 +96,7 @@ def generate_samples(_df, _d):
 
 
 if __name__ == "__main__":
-    ds = ['wnrr']
+    ds = ['fb15k-237']
     for d in ds:
         triples = load_triple_indices(d)
         generate_samples(triples, d)

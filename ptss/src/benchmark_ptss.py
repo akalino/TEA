@@ -106,7 +106,7 @@ def parallel_score_numpy(_triple_df, _ent_embs, _rel_sims):
 
 
 if __name__ == "__main__":
-    ds = ['wnrr']
+    ds = ['fb15k-237']
     model_paths = ['pytorch-models/{}-complex.pt',
                    'pytorch-models/{}-conve.pt',
                    'pytorch-models/{}-distmult.pt',
@@ -115,7 +115,7 @@ if __name__ == "__main__":
                    'pytorch-models/{}-transe.pt'
                    ]
     samples = [5]
-    pred_type = ['freq'] #, 'freq', 'kl']
+    pred_type = ['freq', 'kl']
     for d in ds:
         for ns in samples:
             trip_df = get_triples(d, ns)

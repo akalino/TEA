@@ -41,8 +41,8 @@ def calculate_relatedness(_fp):
 if __name__ == "__main__":
     wd = os.path.normpath(os.getcwd() + os.sep + os.pardir + os.sep + os.pardir)
     print(wd)
-    dp = "/kge/data/wnrr/"
+    dp = "/kge/data/fb15k-237/"
     fp = wd + dp + "all_triples_idx.csv"
     rm = calculate_relatedness(fp)
     np.savetxt(wd + dp + "rel_matrix.csv", rm, fmt='%1.3f', delimiter=",")
-    np.save('wnrr-freq.npy', rm)
+    np.save('fb15k-237-freq.npy', rm)
