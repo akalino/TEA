@@ -42,10 +42,10 @@ def computeLineGraph(alltriples, numEntities, KG, basepath):
 
 def main():
     wd = os.path.normpath(os.getcwd() + os.sep + os.pardir + os.sep + os.pardir + os.sep + os.pardir)
-    dp = "/kge/data/wnrr/"
+    dp = "/kge/data/fb15k-237/"
     basepath = wd + dp
 
-    KG = "wnrr"
+    KG = "fb15k-237"
     triples = wd + dp + 'all_triples_idx.csv'
     all_triples = pd.read_csv(triples)
     all_triples = all_triples.to_numpy()

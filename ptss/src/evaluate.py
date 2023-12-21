@@ -33,10 +33,11 @@ def get_relational_labels(_ds, _dup):
         _rel_labs = df['p'].tolist()
         _trip_idx = df['triple_idx'].tolist()
     else:
-        df = pd.read_csv('intermediate/{}_triples.csv'.format(_ds))
-        _rel_labs = df['p'].tolist()
+        df = pd.read_csv('intermediate/{}_all_triples_idx.csv'.format(_ds))
+        _rel_labs = df['r'].tolist()
         print('Found {} triples'.format(len(_rel_labs)))
-        _trip_idx = []
+        _trip_idx = [j for j in range(len(df))]
+        _rel_labs = [_rel_labs[r] for r in range(len(df) - 1)]
     return _rel_labs, _trip_idx
 
 
@@ -68,11 +69,11 @@ def load_space(_ds_name, _dim, _nwalk, _full_name, _type, _dup):
         out = measure_clusters(vecs.numpy(), tgt)
         return out
     if _type == 'cluster':
-        odf = find_best_clustering(vecs.numpy(), tgt, _full_name)
+        odf = find_best_clustering(vecs, tgt, _full_name)
         hop_mu, hop_sigma = hopkins_runner(vecs.numpy())
         odf['hopkins_mu'] = hop_mu
         odf['hopkins_sigma'] = hop_sigma
-        vecs = vecs.numpy()
+        vecs = vecs
         kls_embs, mu_kls, std_kls = apply_spatial_historgram(vecs, 100)
         odf['spat_mu'] = mu_kls
         odf['spat_sigma'] = std_kls
@@ -106,6 +107,8 @@ def load_space(_ds_name, _dim, _nwalk, _full_name, _type, _dup):
 
 if __name__ == "__main__":
     ds = 'wnrr'
+    ns = 0.1
+    type = 'edge'
     res = []
     for mn in ['complex',
                'conve',
@@ -113,25 +116,29 @@ if __name__ == "__main__":
                'rescal',
                'rotate',
                'transe']:
-        for pt in ['emb', 'kl', 'freq']:
-            full_name = 'triples_{}-{}-ht-5-{}_5_{}'.format(ds, mn, pt, pt)
+        for pt in ['emb']:  #, 'kl', 'freq']:
+            full_name = 'triples_{}-{}-ht-{}-{}_{}_{}'.format(ds, mn, ns, pt, ns, pt)
             print('========= Results for {} ========='.format(full_name))
-            cl, cd = load_space(ds, -1, -1, full_name, 'edge', False)
-            res.append([full_name,
-                        cl[0.8]['micro-f1'],
-                        cl[0.8]['macro-f1'],
-                        cl[0.8]['weighted-f1'] ,
-                        cd[0.8]['micro-f1'],
-                        cd[0.8]['macro-f1'],
-                        cd[0.8]['weighted-f1'],
-                        ])
-    df = pd.DataFrame(res)
-    df.columns = ['model',
-                  'cl-mic',
-                  'cl-mac',
-                  'cl-wei',
-                  'cd-mic',
-                  'cd-mac',
-                  'cd-wei'
-                  ]
-    df.to_csv('results/{}_all.csv'.format(ds), index=False)
+            if type == 'edge':
+                cl, cd = load_space(ds, -1, -1, full_name, 'edge', False)
+                res.append([full_name,
+                            cl[0.8]['micro-f1'],
+                            cl[0.8]['macro-f1'],
+                            cl[0.8]['weighted-f1'] ,
+                            cd[0.8]['micro-f1'],
+                            cd[0.8]['macro-f1'],
+                            cd[0.8]['weighted-f1'],
+                            ])
+                df = pd.DataFrame(res)
+                df.columns = ['model',
+                              'cl-mic',
+                              'cl-mac',
+                              'cl-wei',
+                              'cd-mic',
+                              'cd-mac',
+                              'cd-wei'
+                              ]
+                df.to_csv('results/{}_{}_all_nd.csv'.format(ds, ns), index=False)
+            # if type == 'cluster':
+            #     res = load_space(ds, -1, -1, full_name, 'cluster', False)
+

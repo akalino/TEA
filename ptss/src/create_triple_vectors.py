@@ -13,11 +13,11 @@ def experiments():
             'transe'
             ]
     combs = ['ht']
-    ds = ['fb15k-237']
+    ds = ['wnrr']
     mt = 'standard'
-    pred_type = ['emb', 'freq', 'kl']
+    pred_type = ['emb']
     sds = [300]  # [768, 1024, 2048, 4096, 4800]
-    ns = [5]
+    ns = [0.3]
     for d in ds:
         for m in mods:
             for c in combs:
