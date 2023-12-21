@@ -16,6 +16,7 @@ import os
 from sklearn.cluster import KMeans, Birch
 #from cuml import KMeans
 #from cuml import PCA
+from sklearn.decomposition import PCA
 from sklearn.linear_model import LogisticRegression
 from sklearn.metrics import f1_score
 from sklearn.metrics import classification_report

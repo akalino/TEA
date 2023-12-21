@@ -1,4 +1,5 @@
 import pandas as pd
+import pickle
 import numpy as np
 import math
 import torch
@@ -197,34 +198,15 @@ def data_loader(_d, _mn, _ns, _concat_method, _pt, _norm, _induct):
         if row['triple_index_1'] not in triple_dict.keys():
             triple_dict[row['triple_index_1']] = trip_1
 
-        #print(torch.tensor(row['triple_index_1']))
-        #print(torch.tensor(row['index']))
-        #print(score)
         inp_example = InputExample(texts=[torch.tensor(row['triple_index_1']), torch.tensor(row['index'])], label=score)
         if _induct:
             train_samples.append(inp_example)
-            # print('Train')
-            # print('Example A: {}'.format(torch.tensor(row['triple_index_1'])))
-            # print('Example B: {}'.format(torch.tensor(row['index'])))
-            # print('Score: {}'.format(score))
         else:
             if j < train_size:
-                # print('Train')
-                # print('Example A: {}'.format(torch.tensor(row['triple_index_1'])))
-                # print('Example B: {}'.format(torch.tensor(row['index'])))
-                # print('Score: {}'.format(score))
                 train_samples.append(inp_example)
             elif (j > train_size) and (j < dev_size):
-                # print('Dev')
-                # print('Example A: {}'.format(torch.tensor(row['triple_index_1'])))
-                # print('Example B: {}'.format(torch.tensor(row['index'])))
-                # print('Score: {}'.format(score))
                 dev_samples.append(inp_example)
             else:
-                # print('Test')
-                # print('Example A: {}'.format(torch.tensor(row['triple_index_1'])))
-                # print('Example B: {}'.format(torch.tensor(row['index'])))
-                # print('Score: {}'.format(score))
                 test_samples.append(inp_example)
     print('Added {} training, {} dev and {} test'.format(len(train_samples), len(dev_samples), len(test_samples)))
     print('Indexed {} triples'.format(len(list(triple_dict.keys()))))
@@ -234,6 +216,88 @@ def data_loader(_d, _mn, _ns, _concat_method, _pt, _norm, _induct):
     weights_out = np.zeros((len(weight_est), vec_dim))
     for j in range(len(weight_est)):
         weights_out[j, :] = weight_est[j].cpu().detach().numpy()
+    print('Weights shape: {}'.format(weights_out.shape))
+    return train_samples, dev_samples, test_samples, feat_dim, weights_out, triple_dict
+
+
+def data_loader_lg(_d, _mn, _ns, _concat_method, _pt, _norm, _induct):
+    train_samples = []
+    dev_samples = []
+    test_samples = []
+    df = pd.read_csv('ptss-benchmarks/{}/triple_scores_{}_{}_{}_{}_line.csv'.format(_d, _d, _mn, _ns, _pt))
+    wd = os.path.normpath(os.getcwd() + os.sep + os.pardir + os.sep + os.pardir + os.sep + os.pardir)
+    dp = "/kge/data/{}/"
+    _lg_edges = pd.read_csv(wd + dp.format(_d) + 'line_graph.csv', header=None)
+    _lg_edges.columns = ['in', 'out']
+    num_triples = np.amax(_lg_edges)
+
+    ent_embs, rel_embs = fetch_embeddings('pytorch-models/{}-{}.pt'.format(_d, _mn))
+    emb_dim = ent_embs.shape[1]
+    if _concat_method == 'ht':
+        feat_dim = emb_dim * 2
+    else:
+        feat_dim = emb_dim
+    total = len(df)
+    if _induct:
+        train_size = total
+    else:
+        print('Total samples: {}'.format(total))
+        train_size = int(.8*total)
+        print('Total train: {}'.format(train_size))
+        dev_size = int(.1*total) + train_size
+        print('Total dev: {}'.format(dev_size))
+    j = 0
+    triple_dict = {}
+    wd = os.path.normpath(os.getcwd() + os.sep + os.pardir + os.sep + os.pardir + os.sep + os.pardir)
+    dp = "/kge/data/{}/"
+    basepath = wd + dp.format(_d) + 'triple-arrays.pkl'
+    with open(basepath, 'rb') as f:
+        _t2id = pickle.load(f)
+    for k, row in tqdm(df.iterrows()):
+        j += 1
+        lgt1 = row['in']
+        lgt2 = row['out']
+        lgtn = row['corr']
+        pos_score = float(row['pos_score'])
+        neg_score = float(row['neg_score'])
+        t1 = _t2id[lgt1]
+        t2 = _t2id[lgt2]
+        t3 = _t2id[lgtn]
+        trip_1 = represent_triples(t1[0], t1[2], t1[1], ent_embs, rel_embs, _concat_method, _norm)
+        trip_2 = represent_triples(t2[0], t2[2], t2[1], ent_embs, rel_embs, _concat_method, _norm)
+        trip_3 = represent_triples(t3[0], t3[2], t3[1], ent_embs, rel_embs, _concat_method, _norm)
+        if row['in'] not in triple_dict.keys():
+            triple_dict[int(row['in'])] = trip_1
+        if row['out'] not in triple_dict.keys():
+            triple_dict[int(row['out'])] = trip_2
+        if row['corr'] not in triple_dict.keys():
+            triple_dict[int(row['corr'])] = trip_3
+
+        pos_example = InputExample(texts=[torch.tensor(int(row['in'])), torch.tensor(int(row['out']))], label=pos_score)
+        neg_example = InputExample(texts=[torch.tensor(int(row['in'])), torch.tensor(int(row['corr']))], label=neg_score)
+        if _induct:
+            train_samples.append(pos_example)
+            train_samples.append(neg_example)
+        else:
+            if j < train_size:
+                train_samples.append(pos_example)
+                train_samples.append(neg_example)
+            elif (j > train_size) and (j < dev_size):
+                dev_samples.append(pos_example)
+                dev_samples.append(neg_example)
+            else:
+                test_samples.append(pos_example)
+                test_samples.append(neg_example)
+    print('Added {} training, {} dev and {} test'.format(len(train_samples), len(dev_samples), len(test_samples)))
+    print('Indexed {} triples'.format(len(list(triple_dict.keys()))))
+
+    weights_out = np.zeros((num_triples+1, feat_dim))
+    print('Training on vectors of {} dimension'.format(weights_out.shape))
+
+
+    for j in triple_dict.keys():
+        weights_out[j, :] = triple_dict[j].cpu().detach().numpy()
+
     print('Weights shape: {}'.format(weights_out.shape))
     return train_samples, dev_samples, test_samples, feat_dim, weights_out, triple_dict
 
@@ -316,8 +380,10 @@ def run_triple_fitting(_mod_name, _feature_name, _ds_name, _mt, _sd, _ns, _pt):
             feature_dim = weights.shape[1]
             print('Training on {} features'.format(feature_dim))
         except FileNotFoundError:
-            train, dev, test, feature_dim, weights, trip_dict = data_loader(_ds_name, _mod_name, _ns,
-                                                                            _feature_name, _pt, False, False)
+            # train, dev, test, feature_dim, weights, trip_dict = data_loader(_ds_name, _mod_name, _ns,
+            #                                                                 _feature_name, _pt, False, False)
+            train, dev, test, feature_dim, weights, trip_dict = data_loader_lg(_ds_name, _mod_name, _ns,
+                                                                               _feature_name, _pt, False, False)
             np.save('intermediate/{}-training.npy'.format(full_name), train)
             print('wrote train')
             np.save('intermediate/{}-dev.npy'.format(full_name), dev)
