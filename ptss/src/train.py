@@ -21,7 +21,7 @@ from modules.TripleEmbedderOrig import TripleEmbedder
 from modules.CustomCosineLoss import CustomCosineSimilarityLoss
 
 
-BATCH_SIZE = 128
+BATCH_SIZE = 512
 # Batch size for WN18RR 128
 EPOCHS = 50
 LR = 2e-3
@@ -310,7 +310,7 @@ def training(_train, _dev, _test, _feat_dim, _init_w, _num_epochs, _full_name, _
     model_save_path = 'train_stats'
     try:
         wd = os.path.normpath(os.getcwd())
-        model_out_path = os.path.join(wd, 'triple_vectors_new',
+        model_out_path = os.path.join(wd, 'triple_vectors',
                                       'triples_{f}_{d}_{n}_{p}.pt'.format(f=_full_name, d=sentence_dimension, n=_ns, p=_pt))
         print(model_out_path)
         vecs = torch.load(model_out_path)
@@ -358,11 +358,13 @@ def training(_train, _dev, _test, _feat_dim, _init_w, _num_epochs, _full_name, _
 
 
 def run_triple_fitting(_mod_name, _feature_name, _ds_name, _mt, _sd, _ns, _pt):
+    _line = False
     print('Working with {} data'.format(_ds_name))
     full_name = '{}-{}-{}-{}-{}'.format(_ds_name, _mod_name, _feature_name, _ns, _pt)
+    print(full_name)
     try:
         wd = os.path.normpath(os.getcwd())
-        model_out_path = os.path.join(wd, 'triple_vectors_new',
+        model_out_path = os.path.join(wd, 'triple_vectors',
                                       'triples_{f}_{n}_{p}.pt'.format(f=full_name, n=_ns, p=_pt))
         vecs = torch.load(model_out_path)
         print('Already trained this model, loaded vectors with shape {}'.format(vecs.shape))
@@ -380,10 +382,12 @@ def run_triple_fitting(_mod_name, _feature_name, _ds_name, _mt, _sd, _ns, _pt):
             feature_dim = weights.shape[1]
             print('Training on {} features'.format(feature_dim))
         except FileNotFoundError:
-            # train, dev, test, feature_dim, weights, trip_dict = data_loader(_ds_name, _mod_name, _ns,
-            #                                                                 _feature_name, _pt, False, False)
-            train, dev, test, feature_dim, weights, trip_dict = data_loader_lg(_ds_name, _mod_name, _ns,
-                                                                               _feature_name, _pt, False, False)
+            if _line:
+                train, dev, test, feature_dim, weights, trip_dict = data_loader_lg(_ds_name, _mod_name, _ns,
+                                                                                   _feature_name, _pt, False, False)
+            else:
+                train, dev, test, feature_dim, weights, trip_dict = data_loader(_ds_name, _mod_name, _ns,
+                                                                                _feature_name, _pt, False, False)
             np.save('intermediate/{}-training.npy'.format(full_name), train)
             print('wrote train')
             np.save('intermediate/{}-dev.npy'.format(full_name), dev)

@@ -27,17 +27,21 @@ def np2cudf(df):
     return pdf
 
 
-def get_relational_labels(_ds, _dup):
+def get_relational_labels(_ds, _dup, _vecs):
     if _dup:
         df = pd.read_csv('intermediate/{}_duplicates.csv'.format(_ds))
         _rel_labs = df['p'].tolist()
         _trip_idx = df['triple_idx'].tolist()
     else:
         df = pd.read_csv('intermediate/{}_all_triples_idx.csv'.format(_ds))
+        # df = pd.read_csv('intermediate/{}_t2v_triples.csv'.format(_ds))
         _rel_labs = df['r'].tolist()
+        # _rel_labs = df['p']
         print('Found {} triples'.format(len(_rel_labs)))
-        _trip_idx = [j for j in range(len(df))]
-        _rel_labs = [_rel_labs[r] for r in range(len(df) - 1)]
+        _trip_idx = [j for j in range(_vecs.shape[0])]
+        # _trip_idx = [j for j in range(len(df))]
+        # _rel_labs = [_rel_labs[r] for r in range(len(df))]
+        _rel_labs = [_rel_labs[r] for r in range(_vecs.shape[0])]
     return _rel_labs, _trip_idx
 
 
@@ -45,8 +49,9 @@ def load_space(_ds_name, _dim, _nwalk, _full_name, _type, _dup):
     wd = os.path.normpath(os.getcwd() + os.sep + os.pardir)
     if 't2v' in _full_name:
         print('Loading triple2vec')
-        vecs = np.load('triple_vectors/t2v_{}_{}_{}.npy'.format(_ds_name, _dim, _nwalk),
+        vecs = np.load('triple_vectors/triple_vecs_{}_{}_{}.npy'.format(_ds_name, _dim, _nwalk),
                        allow_pickle=True)
+        print(vecs.shape)
     else:
         print('Loading pairwise edge similarity vectors')
         pth = os.path.join(wd, 'src', 'triple_vectors_new', '{}.pt'.format(_full_name))
@@ -57,7 +62,7 @@ def load_space(_ds_name, _dim, _nwalk, _full_name, _type, _dup):
         #pth = os.path.join(wd, 'triple_vectors', 'triples_{f}.pt'.format(f=_full_name))
         #vecs = torch.load(pth).detach().cpu()
     #trep_cuda = np2cudf(vecs)
-    tgt, idx = get_relational_labels(_ds_name, _dup)
+    tgt, idx = get_relational_labels(_ds_name, _dup, vecs)
     if _dup:
         try:
             vecs = [vecs[j].numpy() for j in idx]
@@ -81,9 +86,9 @@ def load_space(_ds_name, _dim, _nwalk, _full_name, _type, _dup):
         return odf
     elif _type == 'edge':
         cl = edge_classification(vecs, tgt)
-        print('.8 nodes micro F1 {}'.format(cl[0.8]['micro-f1']))
+        print('.8 nodes micro F1 {}'.format(cl[0.9]['micro-f1']))
         dl = edge_deep(vecs, tgt, _dup)
-        print('.8 nodes micro F1 {}'.format(dl[0.8]['micro-f1']))
+        print('.8 nodes micro F1 {}'.format(dl[0.9]['micro-f1']))
         return cl, dl
     elif _type == 'tsne':
         n_components = 2
@@ -106,28 +111,27 @@ def load_space(_ds_name, _dim, _nwalk, _full_name, _type, _dup):
 
 
 if __name__ == "__main__":
-    ds = 'wnrr'
-    ns = 0.1
+    os.system("taskset -p 0xff %d" % os.getpid())
+    ds = 'fb15k-237'
+    ns = 0.4
     type = 'edge'
     res = []
-    for mn in ['complex',
-               'conve',
-               'distmult',
-               'rescal',
-               'rotate',
-               'transe']:
+    # nw = 10
+    for mn in  ['rotate']: # ['complex', 'conve', 'distmult', 'rescal', 'rotate', 'transe']:
         for pt in ['emb']:  #, 'kl', 'freq']:
+            # full_name = 't2v_{}_{}_{}'.format(ds, mn, nw)
             full_name = 'triples_{}-{}-ht-{}-{}_{}_{}'.format(ds, mn, ns, pt, ns, pt)
             print('========= Results for {} ========='.format(full_name))
             if type == 'edge':
-                cl, cd = load_space(ds, -1, -1, full_name, 'edge', False)
+                cl, cd = load_space(ds, -1, -1, full_name, 'edge', True)
+                # cl, cd = load_space(ds, mn, nw, full_name, 'edge', False)
                 res.append([full_name,
-                            cl[0.8]['micro-f1'],
-                            cl[0.8]['macro-f1'],
-                            cl[0.8]['weighted-f1'] ,
-                            cd[0.8]['micro-f1'],
-                            cd[0.8]['macro-f1'],
-                            cd[0.8]['weighted-f1'],
+                            cl[0.9]['micro-f1'],
+                            cl[0.9]['macro-f1'],
+                            cl[0.9]['weighted-f1'],
+                            cd[0.9]['micro-f1'],
+                            cd[0.9]['macro-f1'],
+                            cd[0.9]['weighted-f1'],
                             ])
                 df = pd.DataFrame(res)
                 df.columns = ['model',
@@ -138,7 +142,7 @@ if __name__ == "__main__":
                               'cd-mac',
                               'cd-wei'
                               ]
-                df.to_csv('results/{}_{}_all_nd.csv'.format(ds, ns), index=False)
+                # df.to_csv('results/{}_{}_all_multi.csv'.format(ds, ns), index=False)
             # if type == 'cluster':
             #     res = load_space(ds, -1, -1, full_name, 'cluster', False)
 

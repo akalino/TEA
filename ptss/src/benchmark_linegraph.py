@@ -12,6 +12,43 @@ import random
 from tqdm import tqdm
 
 
+def load_triple_map_batch(_kg, _ns):
+    wd = os.path.normpath(os.getcwd() + os.sep + os.pardir + os.sep + os.pardir + os.sep + os.pardir)
+    dp = "/kge/data/{}/"
+    basepath = wd + dp.format(_kg) + 'triple-arrays.pkl'
+    with open(basepath, 'rb') as f:
+        _t2id = pickle.load(f)
+    _lg_edges = pd.read_csv(wd + dp.format(_kg) + 'line_graph.csv', header=None)
+    _lg_edges.columns = ['in', 'out']
+    _lg_edges = _lg_edges.sample(frac=_ns, random_state=42, replace=False)
+    _grouped_edges = _lg_edges.groupby('in')['out'].apply(list).reset_index(name='grp')
+    print(_grouped_edges)
+    try:
+        _lg_ids = pd.read_csv(wd + dp.format(_kg) + 'triple_index_df.csv')
+    except FileNotFoundError:
+        triple_idx = []
+        heads = []
+        rels = []
+        tails = []
+        with open(wd + dp.format(_kg) + 'triples2ids.csv') as f:
+            d = f.readlines()
+        _ld_json = d[0].split('),')
+        for j in _ld_json:
+            idx = j.strip('{').strip(' ').split(':')
+            triple_idx.append(idx[0])
+            arr = idx[1].strip(' array([').strip(']').split(',')
+            heads.append(int(arr[0].strip()))
+            rels.append(int(arr[1].strip()))
+            try:
+                tails.append(int(arr[2].strip()))
+            except ValueError:
+                tails.append(int(arr[2].strip().strip('])}')))
+        _lg_ids = pd.DataFrame({'triple': triple_idx, 'head': heads,
+                                'rel': rels, 'tail': tails})
+        _lg_ids.to_csv(wd + dp.format(_kg) + 'triple_index_df.csv', index=False)
+    return _t2id, _grouped_edges, _lg_ids
+
+
 def load_triple_map(_kg, _ns):
     wd = os.path.normpath(os.getcwd() + os.sep + os.pardir + os.sep + os.pardir + os.sep + os.pardir)
     dp = "/kge/data/{}/"
@@ -87,11 +124,13 @@ def apply_scoring(_df, _t2idx):
     _df['neg_score'] = _neg_scores
     return _df
 
+
 def score_wrapper(_df):
     return apply_scoring(_df, t2id)
 
+
 def parallel_score(_triple_df, _t2idx, _ent_embs, _rel_embs):
-    num_cores = multiprocessing.cpu_count() - 1
+    num_cores = multiprocessing.cpu_count() 
     num_partitions = num_cores
     df_split = np.array_split(_triple_df, num_partitions)
     pool = multiprocessing.Pool(num_cores)
@@ -103,27 +142,43 @@ def parallel_score(_triple_df, _t2idx, _ent_embs, _rel_embs):
 
 def negative_edges(_df):
     corr = []
+    pos = []
     for _, row in tqdm(_df.iterrows()):
         sub = lg_edges[lg_edges['in'] == row['in']]
         true_list = sub['out'].tolist()
+        pos.append(random.choice(true_list))
         corr_list = [x for x in edge_ids if x not in true_list]
         corr.append(random.choice(corr_list))
+    _df['out'] = pos
     _df['corr'] = corr
     return _df
 
 
+def negative_edges_grouped(_df):
+    corr = []
+    pos = []
+    for _, row in tqdm(_df.iterrows()):
+        pos.append(random.choice(row['grp']))
+        corr_list = [x for x in edge_ids if x not in row['grp']]
+        corr.append(random.choice(corr_list))
+    _df['corr'] = corr
+    _df['out'] = pos
+    return _df
+
+
 def parallel_negative(_triple_df, _all_edges):
-    num_cores = multiprocessing.cpu_count() - 1
+    num_cores = multiprocessing.cpu_count() 
     num_partitions = num_cores
     df_split = np.array_split(_triple_df, num_partitions)
     pool = multiprocessing.Pool(num_cores)
-    df = pd.concat(pool.map(negative_edges, df_split))
+    df = pd.concat(pool.map(negative_edges_grouped, df_split))
     pool.close()
     pool.join()
     return df
 
 
 if __name__ == "__main__":
+    os.system("taskset -p 0xff %d" % os.getpid())
     kgs = ['fb15k-237']
     model_paths = ['pytorch-models/{}-complex.pt',
                    'pytorch-models/{}-conve.pt',
@@ -132,16 +187,17 @@ if __name__ == "__main__":
                    'pytorch-models/{}-rotate.pt',
                    'pytorch-models/{}-transe.pt'
                    ]
-    for ns in [.1, .2, .3, .4, .5, .6, .7, .8, .9]:
+    for ns in [.1, .2, .3, .4]:
         for kg in kgs:
-            t2id, lg_edges, lg_ids = load_triple_map(kg, ns)
-            all_edges = np.amax(lg_edges)
+            t2id, lg_edges, lg_ids = load_triple_map_batch(kg, ns)
+            # all_edges = np.amax(lg_edges)
+            all_edges = np.max(lg_edges['in'].tolist())
             print('Max edges: {}'.format(all_edges))
             edge_ids = [x for x in range(all_edges)]
             for m in model_paths:
                 mn = m.split('/')[1].split('-')[1].split('.')[0]
                 try:
-                    df = pd.read_csv('ptss-benchmarks/{}/triple_scores_{}_{}_{}_emb_line.csv'.format(kg, kg, mn, ns))
+                    df = pd.read_csv('ptss-benchmarks/{}/triple_scores_{}_{}_{}_emb_line_.csv'.format(kg, kg, mn, ns))
                 except FileNotFoundError:
                     try:
                         lgn_edges = pd.read_csv('ptss-benchmarks/{}/triple_scores_{}_{}_{}_neg_samp.csv'.format(kg, kg, mn, ns))
