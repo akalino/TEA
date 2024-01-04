@@ -5,19 +5,14 @@ from train import run_triple_fitting
 
 def experiments():
     mods = [
-            'complex',
-            'conve',
-            'distmult',
-            'rescal',
-            'rotate',
-            'transe'
+            'transe',
             ]
     combs = ['ht']
-    ds = ['wnrr']
+    ds = ['fb15k-237']
     mt = 'standard'
     pred_type = ['emb']
     sds = [300]  # [768, 1024, 2048, 4096, 4800]
-    ns = [0.3]
+    ns = [30]
     for d in ds:
         for m in mods:
             for c in combs:

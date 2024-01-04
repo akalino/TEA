@@ -228,7 +228,7 @@ def load_rel_labels():
 def edge_classification(_wvs, _labs):
     data_size = len(_wvs)
     print("Total number of edges to classify: {}".format(data_size))
-    train_pcts = [.8]
+    train_pcts = [.9]
     _wvs = shuffle(_wvs, random_state=17)
     _labs = shuffle(_labs, random_state=17)
     test_feat = _wvs[int(data_size*.8):]
@@ -242,7 +242,7 @@ def edge_classification(_wvs, _labs):
                                  verbose=0,
                                  max_iter=1000,
                                  warm_start=True,
-                                 n_jobs=1)
+                                 n_jobs=-1)
         clf = mod.fit(features, labels)
         _preds = clf.predict(test_feat)
         # print("Percent labeled nodes: {}".format(p))
@@ -255,8 +255,8 @@ def edge_classification(_wvs, _labs):
         score = f1_score(test_lab, _preds, average="weighted")
         tracker[p]['weighted-f1'] = score
         print("F1 weighted score: {}".format(score))
-        #if p == .8:
-        #    print(classification_report(test_lab, _preds, zero_division=1))
+        if p == .9:
+            print(classification_report(test_lab, _preds, zero_division=1))
     return tracker
 
 
@@ -291,7 +291,7 @@ def edge_deep(_wvs, _labs, _dup):
     print("Total number of "
           "edges to classify: {} "
           "into {} classes".format(data_size, n_class))
-    train_pcts = [.8]
+    train_pcts = [.9]
     _wvs = shuffle(_wvs, random_state=17)
     _labs = shuffle(_labs, random_state=17)
     test_feat = _wvs[int(data_size * .8):]

@@ -2,6 +2,7 @@ import ot.gromov
 import pandas as pd
 import numpy as np
 import torch
+import pickle
 
 from tqdm import tqdm
 
@@ -17,6 +18,7 @@ def find(matrix, value):
 
 
 def run():
+    _save = True
     _check_best = True
     _scale = True
     sizes = [512, 1024, 2048]
@@ -31,7 +33,7 @@ def run():
             print('Experimenting with {} triple '
                   'representation and batch size {}'.format(src_name, bsz))
             n_guides = 100
-            trg_name = 'dct_1'
+            trg_name = 'gem'
             trips, sents = load_spaces('nytfb', src_name, trg_name, 5, True)
             df = pd.read_csv('t2idx_nytfb.csv')
             l = df[df['rel_idx'] != 0].index.tolist()
@@ -96,6 +98,11 @@ def run():
                 projs = mapper.project(sents_to_proj,
                                        method='conditional')
                 score = mapper.conditional_score(sents_to_proj)
+                if _save:
+                    with open('maps/{}_{}_{}_mapper_obj.pkl'.format(src_name, trg_name, bsz), 'wb') as f:
+                        pickle.dump(mapper, f)
+                    with open('maps/{}_{}_{}_map_matrix.npy'.format(src_name, trg_name, bsz), 'wb') as f:
+                        np.save(f, P)
                 sims = []
                 for j in range(len(projs)):
                     src_smp = projs[j]
